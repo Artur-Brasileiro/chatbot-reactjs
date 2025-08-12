@@ -1,6 +1,6 @@
 {
   "name": "chatbot-reactjs",
-  "homepage": "https://github.com/Artur-Brasileiro/chatbot-reactjs",
+  "homepage": "https://Artur-Brasileiro.github.io/chatbot-reactjs",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
     "preview": "vite preview"
   },
   "dependencies": {
