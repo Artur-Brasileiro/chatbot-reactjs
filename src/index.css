@@ -52,18 +52,22 @@ body {
   max-width: 700px;
   padding: 40px;
   margin: 20px auto;
-  background-color: rgba(255, 255, 255, 0.7); /* Fundo branco semi-transparente */
-  backdrop-filter: blur(10px); /* Efeito de vidro fosco (desfoque) */
+  /* background-color: rgba(255, 255, 255, 0.7);  <-- COMENTE OU REMOVA ESTA LINHA */
+  background-color: var(--about-background-color); /* <-- ADICIONE ESTA LINHA */
+  backdrop-filter: blur(10px); 
   border-radius: 12px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  /* Adicione uma transição para a mudança de cor ficar mais suave */
+  transition: background-color 0.5s ease, color 0.5s ease;
 }
 
 .about-section p {
-  font-size: 1rem; /* Reduzido para o tamanho padrão */
-  color: var(--text-color);
-  line-height: 1.6; /* Levemente ajustado */
+  font-size: 1rem;
+  /* color: var(--text-color); <-- SUBSTITUA ESTA LINHA */
+  color: var(--about-text-color); /* <-- PELA NOVA VARIÁVEL */
+  line-height: 1.6;
   margin-bottom: 15px;
 }
 

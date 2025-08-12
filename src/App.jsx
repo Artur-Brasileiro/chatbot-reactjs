@@ -1,3 +1,5 @@
+// src/App.jsx
+
 import { useEffect, useRef, useState } from "react";
 import ChatbotIcon from "./components/ChatbotIcon";
 import ChatForm from "./components/ChatForm";
@@ -9,14 +11,17 @@ const App = () => {
   const chatBodyRef = useRef();
   const [showChatbot, setShowChatbot] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  
+
   // =======================================================
   // NOSSO "PAINEL DE CONTROLE" DE CORES
   // =======================================================
-  const [siteColors, setSiteColors] = useState({
-    background: '#f4f1ea', // Cor de fundo inicial
-    text: '#4b3f35',       // Cor de texto inicial
-  });
+  const initialColors = {
+    background: '#f4f1ea',
+    text: '#4b3f35',
+    aboutBackground: 'rgba(255, 255, 255, 0.7)',
+    aboutText: '#4b3f35', // Cor para o texto da div "Sobre"
+  };
+  const [siteColors, setSiteColors] = useState(initialColors);
 
   // Reinicia o histórico do chat a cada atualização da página
   const [chatHistory, setChatHistory] = useState([
@@ -28,18 +33,15 @@ const App = () => {
   ]);
 
   // =======================================================
-  // O "EXECUTOR" ATUALIZADO PARA ENTENDER COMANDOS
+  // O "EXECUTOR" ATUALIZADO PARA ENTENDER MÚLTIPLOS COMANDOS
   // =======================================================
-    const generateBotResponse = async (history) => {
+  const generateBotResponse = async (history) => {
     setIsTyping(true);
 
     const updateHistory = (text, isError = false) => {
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "model", text, isError },
-      ]);
+      setChatHistory((prev) => [...prev, { role: "model", text, isError }]);
     };
-    
+
     const cleanHistory = history.map(({ role, text }) => ({ role, parts: [{ text }] }));
 
     const requestOptions = {
@@ -55,40 +57,53 @@ const App = () => {
         throw new Error(errorData?.error?.message || "Something went wrong!");
       }
       const data = await response.json();
-      
       const apiResponseText = data.candidates[0].content.parts[0].text.trim();
-      
-      // --- LÓGICA ATUALIZADA E MAIS INTELIGENTE ---
 
-      // 1. Usa uma expressão regular para encontrar um objeto JSON na resposta.
-      const jsonMatch = apiResponseText.match(/{.*}/s);
+      // Procura por um JSON (objeto ou array) na resposta
+      const jsonMatch = apiResponseText.match(/(\[.*\]|\{.*\})/s);
 
       if (jsonMatch) {
-        // 2. Se encontrou um JSON, tenta processá-lo.
         try {
-          const command = JSON.parse(jsonMatch[0]);
-          if (command.action === 'change_color' && command.target && command.color) {
-            // 3. Se for um comando de cor válido, EXECUTA a mudança de cor.
-            setSiteColors(prevColors => ({
-              ...prevColors,
-              [command.target]: command.color
-            }));
-            
-            // E envia uma mensagem de confirmação para o chat.
-            updateHistory(`Pronto! A cor foi alterada. Quer tentar outra?`);
+          const parsedJson = JSON.parse(jsonMatch[0]);
+          // Garante que estamos trabalhando com um array de comandos
+          const commands = Array.isArray(parsedJson) ? parsedJson : [parsedJson];
+
+          let colorsToUpdate = {};
+          let needsReset = false;
+          let hasChange = false;
+
+          // Itera sobre todos os comandos recebidos
+          for (const command of commands) {
+            if (command.action === 'change_color' && command.target && command.color) {
+              // Verifica se o alvo do comando é válido
+              if (initialColors.hasOwnProperty(command.target)) {
+                colorsToUpdate[command.target] = command.color;
+                hasChange = true;
+              }
+            } else if (command.action === 'reset_color') {
+              needsReset = true;
+              break; // Se encontrar um reset, para o loop
+            }
+          }
+
+          if (needsReset) {
+            setSiteColors(initialColors);
+            updateHistory("As cores voltaram ao original!");
+          } else if (hasChange) {
+            setSiteColors(prevColors => ({ ...prevColors, ...colorsToUpdate }));
+            updateHistory("Pronto! As cores foram alteradas.");
           } else {
-            // É um JSON, mas não um comando que conhecemos. Apenas exibe o texto.
+            // Se o JSON não for um comando conhecido, mostra o texto
             updateHistory(apiResponseText);
           }
         } catch (e) {
-          // Parecia um JSON, mas deu erro. Exibe o texto original.
+          // Se o JSON for inválido, mostra o texto original
           updateHistory(apiResponseText);
         }
       } else {
-        // 4. Se não encontrou JSON, é uma resposta de texto normal.
+        // Se não for um JSON, é uma resposta normal
         updateHistory(apiResponseText.replace(/\*\*(.*?)\*\*/g, "$1"));
       }
-
     } catch (error) {
       updateHistory(error.message, true);
     } finally {
@@ -101,33 +116,45 @@ const App = () => {
       chatBodyRef.current.scrollTo({ top: chatBodyRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [chatHistory, isTyping]);
-  
+
   // =======================================================
   // APLICANDO AS CORES NO SITE DINAMICAMENTE
   // =======================================================
   return (
-    <div 
-      className="main-layout" 
+    <div
+      className="main-layout"
       style={{
         '--background-color': siteColors.background,
         '--text-color': siteColors.text,
+        '--about-background-color': siteColors.aboutBackground,
+        '--about-text-color': siteColors.aboutText, // Passa a nova cor de texto para o CSS
       }}
     >
       <div className="top-bar">
         <img src={logo} alt="Logo da Cafeteria" className="logo-image" />
       </div>
       <div className="about-section">
-        {/* Mantive o texto original que você tinha */}
         <p>
-        Welcome to Aroma Beans Coffee! ☕  
-        Here, every cup is prepared with carefully selected beans and a true love for coffee.  
-        Our mission is to offer you a unique experience, filled with aromas and flavors that awaken the senses.  
-        Step inside and feel the warm embrace of freshly brewed coffee, crafted with care from bean to cup.
-
-        We take pride in working with trusted farmers who grow their coffee in the finest regions,  
-        harvesting each bean at its peak for maximum flavor and freshness.  
-        Every batch is roasted to perfection, bringing out its natural sweetness, depth, and aroma.  
-        From a smooth latte to a strong espresso, each sip tells a story — a story of passion, quality, and tradition.
+          Olá! Eu sou o assistente virtual da Aroma Beans Coffee. ☕
+        </p>
+        <p>
+          Fui criado para tornar sua experiência mais interativa. Comigo, você pode tirar dúvidas sobre a cafeteria ou personalizar a aparência do site.
+        </p>
+        <p>
+          <strong>Minhas funções:</strong>
+          <br />
+          - Responder perguntas sobre nosso cardápio, preços e horários.
+          <br />
+          - Alterar as cores do site! Tente me pedir algo como:
+          <br />
+          <em>"Mude o fundo para preto e o texto para branco"</em>
+          <br />
+          <em>"Altere a cor do texto do 'sobre' para azul"</em>
+          <br />
+          - Você também pode pedir para <em>"Voltar às cores originais"</em>.
+        </p>
+        <p>
+          Abra o chat no canto inferior direito para começar!
         </p>
       </div>
 
